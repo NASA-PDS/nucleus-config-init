@@ -1,0 +1,86 @@
+# 🏃‍♀️ Continuous Integration and Delivery: Unstable
+# =================================================
+#
+# Note: for this workflow to succeed, the following secrets must be installed
+# in the repository or inherited from the organization:
+#
+# ``ADMIN_GITHUB_TOKEN``
+#     A personal access token of a user with collaborator or better access to
+#     the project repository. You can generate this by visiting GitHub →
+#     Settings → Developer settings → Personal access tokens → Generate new
+#     token. Give the token scopes on ``repo``, ``write:packages``,
+#     ``delete:packages``, ``workflow``, and ``read:gpg_key``.
+# ``CODE_SIGNING_KEY``
+#     A *private* key with which we can sign artifacts.
+# ``OSSRH_USERNAME``
+#     Username for the Central Repository.
+# ``OSSRH_USERNAME``
+#     Password for the Central Repository.
+
+
+---
+
+name: 🤪 Unstable integration & delivery
+
+
+# Driving Event
+# -------------
+#
+# What event starts this workflow: a push to ``main`` (or ``master`` in old
+# parlance).
+
+on:
+    push:
+        branches:
+             - main
+        paths-ignore:
+            - 'CHANGELOG.md'
+            - 'docs/requirements/**'
+    workflow_dispatch:
+concurrency: roundup
+
+
+# What to Do
+# ----------
+#
+# Round up, yee-haw!
+
+jobs:
+    unstable-assembly:
+        name: 🧩 Unstable Assembly
+        runs-on: ubuntu-latest
+        if: github.actor != 'pdsen-ci'
+        steps:
+            -
+                name: 💳 Checkout
+                uses: actions/checkout@v4
+                with:
+                    lfs: true
+                    fetch-depth: 0
+                    token: ${{secrets.ADMIN_GITHUB_TOKEN}}
+            -
+                name: 💳 Docker Hub Identification
+                uses: docker/login-action@v3
+                with:
+                    username: ${{secrets.DOCKERHUB_USERNAME}}
+                    password: ${{secrets.DOCKERHUB_TOKEN}}
+            -
+                name: 🎰 QEMU Multiple Machine Emulation
+                uses: docker/setup-qemu-action@v3
+            -
+                name: 🚢 Docker Buildx
+                uses: docker/setup-buildx-action@v3
+            -
+                name: 🧱 Image Construction and Publication
+                uses: docker/build-push-action@v5
+                with:
+                    context: ./
+                    file: ./docker/Dockerfile
+                    build-args: TBD
+                    platforms: linux/amd64,linux/arm64
+                    push: true
+                    tags: ${{secrets.DOCKERHUB_USERNAME}}/nucleus-config-init:latest
+
+...
+
+# -*- mode: yaml; indent: 4; fill-column: 120; coding: utf-8 -*-
